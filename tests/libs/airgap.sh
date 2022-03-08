@@ -160,6 +160,7 @@ addons:
   while ! snap install /var/tmp/microk8s.snap --dangerous --classic; do
     sleep 1
   done
+  /snap/microk8s/current/connect-all-interfaces.sh
   '
 }
 

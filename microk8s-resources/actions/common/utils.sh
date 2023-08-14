@@ -1152,31 +1152,6 @@ sign_certificate() {
   echo "$csr" | ${SNAP}/usr/bin/openssl x509 -req -sha256 -CA "${SNAP_DATA}/certs/ca.crt" -CAkey "${SNAP_DATA}/certs/ca.key" -CAcreateserial -days 3650 -extfile <(echo "${extensions}")
 }
 
-# check if this file is run with arguments
-if [[ "$0" == "${BASH_SOURCE}" ]] &&
-   [[ ! -z "$1" ]]
-then
-  # call help
-  if echo "$*" | grep -q -- 'help'; then
-    echo "usage: $0 [function]"
-    echo ""
-    echo "Run a utility function and return the output."
-    echo ""
-    echo "available functions:"
-    declare -F | gawk '{print "- "$3}'
-    exit 0
-  fi
-
-  if declare -F "$1" > /dev/null
-  then
-    $1 ${@:2}
-    exit $?
-  else
-    echo "Function does not exist: $1" >&2
-    exit 1
-  fi
-fi
-
 exit_if_low_memory_guard() {
   if [ -e ${SNAP_DATA}/var/lock/low-memory-guard.lock ]
   then
@@ -1385,3 +1360,56 @@ increase_sysctl_parameter() {
     fi
   fi
 }
+
+use_snap_env() {
+  # Configure snap paths for PATH LD_LIBRARY_PATH
+  export PATH="$SNAP/bin:$SNAP/usr/bin:$SNAP/sbin:$SNAP/usr/sbin:$PATH"
+  export LD_LIBRARY_PATH="$SNAP_LIBRARY_PATH:$SNAP/lib:$SNAP/usr/lib:$SNAP/lib/$SNAPCRAFT_ARCH_TRIPLET:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/ceph:${LD_LIBRARY_PATH:-}"
+  export OPENSSL_CONF="$SNAP/etc/ssl/openssl.cnf"
+
+  # Python configuration
+  export PYTHONPATH="$SNAP/usr/lib/python3.8:$SNAP/lib/python3.8/site-packages:$SNAP/usr/lib/python3/dist-packages"
+  export PYTHONNOUSERSITE=false
+
+  # NOTE(neoaggelos/2023-08-14):
+  # we cannot list system locales from snap. instead, we attempt
+  # well-known locales for Ubuntu/Debian/CentOS and check whether
+  # they are available on the system.
+  # if they are, set them for the current shell.
+  for locale in C.UTF-8 en_US.UTF-8 en_US.utf8; do
+    if [ -z "$(export LC_ALL=$locale 2>&1)" ]; then
+      export LC_ALL="${LC_ALL:-$locale}"
+      export LANG="${LANG:-$locale}"
+      break
+    fi
+  done
+
+  # Configure XDG_RUNTIME_DIR
+  export XDG_RUNTIME_DIR="${SNAP_COMMON}/run"
+  mkdir -p "${XDG_RUNTIME_DIR}"
+}
+
+# check if this file is run with arguments
+if [[ "$0" == "${BASH_SOURCE}" ]] &&
+   [[ ! -z "$1" ]]
+then
+  # call help
+  if echo "$*" | grep -q -- 'help'; then
+    echo "usage: $0 [function]"
+    echo ""
+    echo "Run a utility function and return the output."
+    echo ""
+    echo "available functions:"
+    declare -F | gawk '{print "- "$3}'
+    exit 0
+  fi
+
+  if declare -F "$1" > /dev/null
+  then
+    $1 ${@:2}
+    exit $?
+  else
+    echo "Function does not exist: $1" >&2
+    exit 1
+  fi
+fi

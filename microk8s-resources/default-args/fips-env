@@ -1,10 +1,16 @@
-# In a node where FIPS is enabled, ie /proc/sys/crypto/fips_enabled is set to 1
-# set the openssl execution environment:
+# For FIPS-enabled hosts, i.e. when /proc/sys/crypto/fips_enabled is 1,
+# the following configuration is required to use the fips enabled crypto
+# libraries from the host.
+#
+# The paths below are for FIPS enabled Ubuntu 20.04, make sure to adjust
+# accordingly for other distributions.
+
+# Uncomment and specify the binary path and config file for openssl.
 # OPENSSL_EXECUTABLE="/usr/bin/openssl"
 # OPENSSL_CONF="/etc/ssl/openssl.cnf"
 
-# Set GOFIPS to use FIPS certified libs. If not set GOFIPS is implicetely selected.
+# Uncomment and prepend the FIPS libcrypto location to the LD_LIBRARY_PATH
+# LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
+
+# Set GOFIPS=1 so that Go binaries use the FIPS-enabled libcrypto
 GOFIPS=0
-# Point to the location of libcrypto.so
-# LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/:/snap/microk8s/current/lib/"
-# IN_SNAP_LD_LIBRARY_PATH=${LD_LIBRARY_PATH}
